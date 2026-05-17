@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bar Training Simulator</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; user-select: none; }
+        .btn-ing { transition: transform 0.1s; }
+        .btn-ing:active { transform: scale(0.95); }
+        .hidden { display: none !important; }
+        .progress-bar { transition: width 1s linear; }
+        
+        .custom-scroll { 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain; 
+        }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden relative">
+
+    <div id="screen-menu" class="flex-1 flex flex-col items-center justify-center p-6 bg-slate-900 z-10">
+        <div class="text-6xl mb-4 animate-bounce">🍹</div>
+        <h1 class="text-3xl font-black mb-2 tracking-wider text-amber-400 uppercase text-center">Bar Training Hub</h1>
+        <p class="text-xs text-slate-400 mb-8 text-center uppercase tracking-widest">Атестація барменів мережі GLUSCO</p>
+        
+        <div class="w-full max-w-md space-y-4">
+            <button onclick="startLearn()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-600 p-4 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
+                <div>
+                    <div class="text-lg font-bold text-blue-400">1. Навчання</div>
+                    <div class="text-xs text-slate-400">Вивчення рецептур 10 базових напоїв</div>
+                </div>
+                <div class="text-3xl">📖</div>
+            </button>
+            
+            <button onclick="startPractice()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-600 p-4 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
+                <div>
+                    <div class="text-lg font-bold text-green-400">2. Практика</div>
+                    <div class="text-xs text-slate-400">Збирання рецептів з автоматичною роботою над помилками</div>
+                </div>
+                <div class="text-3xl">🧩</div>
+            </button>
+
+            <button onclick="startExam()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-amber-600 p-4 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
+                <div>
+                    <div class="text-lg font-bold text-amber-400">3. Іспит (Атестація)</div>
+                    <div class="text-xs text-slate-400">5 хвилин. Суворий regime. Дозволено 3 помилки.</div>
+                </div>
+                <div class="text-3xl">⏱️</div>
+            </button>
+        </div>
+    </div>
+
+    <div id="screen-learn" class="hidden flex-1 flex flex-col z-10 overflow-hidden">
+        <header class="bg-slate-800 p-4 flex justify-between items-center border-b border-slate-700 flex-shrink-0">
+            <button onclick="showMenu()" class="text-slate-400 hover:text-white px-4 py-2 bg-slate-700 rounded text-sm btn-ing">⬅ Меню</button>
+            <h2 class="font-bold text-blue-400 uppercase text-sm tracking-wider">Технологічні карти</h2>
+            <div class="w-16"></div>
+        </header>
+        <div class="flex-1 p-4 space-y-3 custom-scroll pb-12" id="learn-list">
+            </div>
+    </div>
+
+    <div id="screen-game" class="hidden flex-1 flex flex-col z-10 overflow-hidden">
+        <header class="bg-slate-800 p-3 flex justify-between items-center border-b border-slate-700 flex-shrink-0">
+            <button onclick="showMenu()" class="text-slate-400 hover:text-white px-3 py-1 bg-slate-700 rounded text-xs btn-ing">⬅ Меню</button>
+            
+            <div id="exam-stats" class="hidden flex items-center space-x-4 text-xs font-bold">
+                <div class="text-green-400">Коктейлі: <span id="score-display">0</span>/10</div>
+                <div class="text-red-400">Помилки: <span id="mistakes-display">0</span>/3</div>
+            </div>
+            <div id="practice-badge" class="text-green-400 font-bold uppercase tracking-widest text-xs">Режим практики</div>
+        </header>
+
+        <div id="timer-bar" class="h-1.5 w-full bg-slate-700 hidden flex-shrink-0">
+            <div id="timer-progress" class="h-full bg-amber-500 w-full progress-bar"></div>
+        </div>
+
+        <main class="flex-1 p-3 flex flex-col overflow-hidden">
+            <div class="bg-slate-800 rounded-xl p-3 text-center border border-slate-600 mb-2 shadow-md flex-shrink-0">
+                <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Приготуйте напій:</div>
+                <div id="target-cocktail" class="text-xl font-black text-amber-400">...</div>
+            </div>
+
+            <div class="flex-1 border-2 border-dashed border-slate-600 rounded-xl mb-2 p-2 flex flex-wrap gap-1.5 content-start bg-slate-900/50 custom-scroll" id="shaker-area">
+                </div>
+
+            <div class="flex gap-2 mb-2 flex-shrink-0">
+                <button onclick="checkRecipe()" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-black py-2.5 rounded-lg shadow btn-ing uppercase tracking-wider text-xs">Віддати замовлення</button>
+                <button onclick="clearShaker()" class="bg-red-900 hover:bg-red-800 text-white font-bold py-2.5 px-5 rounded-lg shadow btn-ing text-xs">Скинути</button>
+            </div>
+
+            <div class="h-48 custom-scroll border border-slate-700 rounded-lg p-1.5 bg-slate-950 flex-shrink-0 pb-6">
+                <div class="grid grid-cols-2 gap-1.5" id="keyboard">
+                    </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="overlay-result" class="absolute inset-0 bg-slate-900/95 z-50 hidden flex flex-col justify-center items-center text-center p-6 backdrop-blur-md">
+        <div id="result-icon" class="text-6xl mb-4">🏆</div>
+        <h1 id="result-title" class="text-3xl font-black mb-2 uppercase text-amber-400">Зміна закінчена</h1>
+        <p id="result-msg" class="text-slate-300 text-sm mb-8 max-w-sm leading-relaxed">...</p>
+        <button onclick="showMenu()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg btn-ing text-sm uppercase tracking-wider">Повернутися в меню</button>
+    </div>
+
+    <script>
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
+        }
+
+        const cocktails = [
+            { name: "Mango Passion Margarita", icon: "🥭", ingredients: ["Напій «Маргарита Манго Маракуйя» 11.9%", "Лаймові чипси"] },
+            { name: "Whisky Sour", icon: "🥃", ingredients: ["Віскі бурбон ВАЙЛД ТЕРКІ", "Сік лимону", "Цукровий сироп", "Настоянка Angostura Bitter", "Концентрат Ізіфом", "Апельсин", "Вишня Амарена Santorelli"] },
+            { name: "Pineapple Daiquiri", icon: "🍍", ingredients: ["Напій «Ананасовий Дайкірі» 19.4%", "Ананасові чипси"] },
+            { name: "Aviation", icon: "✈️", ingredients: ["Напій «Евіейшн» 21%", "Вишня Амарена Santorelli"] },
+            { name: "Mirto Negroni", icon: "🍹", ingredients: ["Напій «Мірто Негроні", "Апельсинові чипси"] },
+            { name: "Bloody Mary", icon: "🍅", ingredients: ["Горілка Хортиця Срібна", "Фіпс Бладі Мері МІХ", "Сік томатний", "Сік лимону", "Селера стебло", "Бекон", "Маслини/Оливки"] },
+            { name: "Porn Star Martini", icon: "✨", ingredients: ["Напій «Порн Стар» 13.5%", "Концентрат Ізіфом", "Вино Terra Serena «Prosecco Spumante»", "Апельсинові чипси", "Малинова пудра"] },
+            { name: "Espresso Martini", icon: "🍸", ingredients: ["Горілка Хортиця Срібна", "Цукровий сироп", "Еспресо допіо", "Кава зерно", "Какао порошок"] },
+            { name: "Aperol Spritz", icon: "🍊", ingredients: ["Лікер Апероль Аператив", "Вино Terra Serena «Prosecco Spumante»", "Вода газована", "Вишня Амарена Santorelli", "Апельсин"] },
+            { name: "Apricot Old Fashioned", icon: "🍑", ingredients: ["Напій «Абрикосовий Олдфешн» 21.9%", "Цукрова пудра", "Курага"] }
+        ];
+
+        const allIngredients = [
+            "Напій «Маргарита Манго Маракуйя» 11.9%", "Лаймові чипси", "Віскі бурбон ВАЙЛД ТЕРКІ", 
+            "Сік лимону", "Цукровий сироп", "Настоянка Angostura Bitter", "Концентрат Ізіфом", 
+            "Апельсин", "Вишня Амарена Santorelli", "Напій «Ананасовий Дайкірі» 19.4%", "Ананасові чипси", 
+            "Напій «Евіейшн» 21%", "Напій «Мірто Негроні", "Апельсинові чипси", "Горілка Хортиця Срібна", 
+            "Фіпс Бладі Мері МІХ", "Сік томатний", "Селера стебло", "Бекон", "Маслини/Оливки", 
+            "Напій «Порн Стар» 13.5%", "Вино Terra Serena «Prosecco Spumante»", "Малинова пудра", "Еспресо допіо", 
+            "Кава зерно", "Какао порошок", "Лікер Апероль Аператив", "Вода газована", "Напій «Абрикосовий Олдфешн» 21.9%", 
+            "Цукрова пудра", "Курага"
+        ];
+
+        let currentMode = ''; 
+        let currentTarget = null;
+        let shaker = [];
+        let score = 0;
+        let mistakes = 0;
+        let timeLeft = 300; 
+        let timerInterval;
+        let cocktailQueue = []; 
+
+        function shuffleArray(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function returnToQueue(cocktail) {
+            if (cocktailQueue.length === 0) {
+                cocktailQueue.push(cocktail);
+            } else {
+                const minPos = Math.min(2, cocktailQueue.length);
+                const maxPos = cocktailQueue.length;
+                const targetPos = Math.floor(Math.random() * (maxPos - minPos + 1)) + minPos;
+                cocktailQueue.splice(targetPos, 0, cocktail);
+            }
+        }
+
+        function hideAll() {
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-learn').classList.add('hidden');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('overlay-result').classList.add('hidden');
+            clearInterval(timerInterval);
+        }
+
+        function showMenu() {
+            hideAll();
+            document.getElementById('screen-menu').classList.remove('hidden');
+        }
+
+        function startLearn() {
+            hideAll();
+            document.getElementById('screen-learn').classList.remove('hidden');
+            const list = document.getElementById('learn-list');
+            list.innerHTML = cocktails.map((c, idx) => `
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-md">
+                    <div class="text-base font-black text-amber-400 mb-2 flex items-center gap-2">
+                        <span class="text-xl">${c.icon}</span> ${idx + 1}. ${c.name}
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        ${c.ingredients.map(ing => `<span class="bg-slate-900 text-slate-300 text-[11px] px-2.5 py-1.5 rounded border border-slate-700">${ing}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function startPractice() {
+            hideAll();
+            currentMode = 'practice';
+            document.getElementById('screen-game').classList.remove('hidden');
+            document.getElementById('practice-badge').classList.remove('hidden');
+            document.getElementById('exam-stats').classList.add('hidden');
+            document.getElementById('timer-bar').classList.add('hidden');
+            
+            cocktailQueue = shuffleArray([...cocktails]); 
+            initGameUI();
+            nextCocktail();
+        }
+
+        function startExam() {
+            hideAll();
+            currentMode = 'exam';
+            score = 0; mistakes = 0; timeLeft = 300; 
+            
+            document.getElementById('screen-game').classList.remove('hidden');
+            document.getElementById('practice-badge').classList.add('hidden');
+            document.getElementById('exam-stats').classList.remove('hidden');
+            document.getElementById('timer-bar').classList.remove('hidden');
+            
+            cocktailQueue = shuffleArray([...cocktails]); 
+            updateExamStats();
+            initGameUI();
+            nextCocktail();
+            
+            document.getElementById('timer-progress').style.width = '100%';
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer-progress').style.width = `${(timeLeft/300)*100}%`;
+                if(timeLeft <= 0) endGame("⏰ ЧАС ВИЙШОВ", "Ви не вклалися у відведені 5 хвилин.");
+            }, 1000);
+        }
+
+        function initGameUI() {
+            const kb = document.getElementById('keyboard');
+            const sortedIngs = [...allIngredients].sort((a, b) => a.localeCompare(b, 'uk'));
+            const half = Math.ceil(sortedIngs.length / 2);
+            const columnMajorArray = [];
+            
+            for (let i = 0; i < half; i++) {
+                columnMajorArray.push(sortedIngs[i]); 
+                if (i + half < sortedIngs.length) {
+                    columnMajorArray.push(sortedIngs[i + half]); 
+                }
+            }
+
+            kb.innerHTML = columnMajorArray.map(ing => `
+                <button onclick="addIng('${ing.replace(/'/g, "\\'")}')" class="bg-slate-800 hover:bg-slate-700 active:bg-blue-900 border border-slate-700 text-slate-200 rounded-lg py-2 px-2 text-[11px] font-medium shadow btn-ing text-left leading-tight truncate">
+                    🔹 ${ing}
+                </button>
+            `).join('');
+            
+            clearShaker();
+        }
+
+        function nextCocktail() {
+            if (!currentTarget && cocktailQueue.length === 0) {
+                if (currentMode === 'exam') {
+                    endGame("🎉 ІСПИТ ЗАВЕРШЕНО", "Чудова робота! Ви успішно відповіли на всі питання.");
+                    return;
+                } else {
+                    alert("Супер! Ви бездоганно приготували всі напої. Колода перемішується заново!");
+                    cocktailQueue = shuffleArray([...cocktails]);
+                }
+            }
+            
+            if (cocktailQueue.length > 0) {
+                currentTarget = cocktailQueue.shift();
+                document.getElementById('target-cocktail').innerText = `${currentTarget.icon} ${currentTarget.name}`;
+            }
+            clearShaker();
+        }
+
+        function addIng(ing) {
+            shaker.push(ing);
+            renderShaker();
+        }
+
+        function clearShaker() {
+            shaker = [];
+            renderShaker();
+        }
+
+        function renderShaker() {
+            const area = document.getElementById('shaker-area');
+            if (shaker.length === 0) {
+                area.innerHTML = '<span class="text-slate-500 m-auto text-xs italic">Додайте необхідні компоненти з меню знизу...</span>';
+            } else {
+                area.innerHTML = shaker.map((ing, idx) => `
+                    <span class="bg-blue-950 text-blue-300 border border-blue-700 text-[10px] px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
+                        ${ing}
+                        <b class="text-red-400 hover:text-red-300 cursor-pointer pl-1 text-sm leading-none" onclick="event.stopPropagation(); removeIng(${idx})">×</b>
+                    </span>
+                `).join('');
+            }
+        }
+
+        function removeIng(index) {
+            shaker.splice(index, 1);
+            renderShaker();
+        }
+
+        function checkRecipe() {
+            if (!currentTarget) return;
+            
+            const required = [...currentTarget.ingredients].sort();
+            const assembled = [...shaker].sort();
+            
+            const isCorrect = required.length === assembled.length && required.every((val, index) => val === assembled[index]);
+
+            if (isCorrect) {
+                score++;
+                if (currentMode === 'exam') {
+                    timeLeft = Math.min(300, timeLeft + 4); 
+                    updateExamStats();
+                    
+                    if (cocktailQueue.length === 0) {
+                        endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Ви відповіли на всі питання. Ваш результат: ${score}/10.`);
+                        return;
+                    }
+                } else {
+                    const practiceAlert = document.createElement('div');
+                    practiceAlert.className = 'absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm font-bold animate-pulse';
+                    practiceAlert.innerText = '✅ Правильно!';
+                    document.body.appendChild(practiceAlert);
+                    setTimeout(() => practiceAlert.remove(), 1000);
+                }
+                
+                currentTarget = null;
+                nextCocktail();
+            } else {
+                if (currentMode === 'exam') {
+                    mistakes++;
+                    updateExamStats();
+                    
+                    alert(`❌ Помилка в рецепті!\n\nДля "${currentTarget.name}" потрібно використовувати:\n• ${currentTarget.ingredients.join('\n• ')}`);
+                    
+                    if (mistakes >= 3) {
+                        endGame("❌ ІСПИТ ПРОВАЛЕНО", "Ви припустилися 3 критичних помилок під час складання рецептів.");
+                        return;
+                    }
+                    
+                    if (cocktailQueue.length === 0) {
+                        endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Всі питання вичерпано. Ваш результат: ${score}/10.`);
+                        return;
+                    }
+                    
+                    currentTarget = null;
+                    nextCocktail();
+                } else {
+                    alert(`❌ Помилка в рецепті!\n\nДля "${currentTarget.name}" потрібно використовувати:\n• ${currentTarget.ingredients.join('\n• ')}`);
+                    
+                    returnToQueue(currentTarget);
+                    currentTarget = null;
+                    nextCocktail();
+                }
+            }
+        }
+
+        function updateExamStats() {
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('mistakes-display').innerText = mistakes;
+        }
+
+        function endGame(title, message) {
+            clearInterval(timerInterval);
+            document.getElementById('overlay-result').classList.remove('hidden');
+            document.getElementById('result-title').innerText = title;
+            
+            const isPassed = currentMode === 'exam' ? (score >= 7 && mistakes < 3) : true;
+            const statusText = isPassed ? "<span class='text-green-400 font-bold'>АТЕСТАЦІЮ ПРОЙДЕНО!</span>" : "<span class='text-red-400 font-bold'>АТЕСТАЦІЮ НЕ СКЛАДЕНО.</span>";
+            document.getElementById('result-icon').innerText = isPassed ? "🏆" : "📉";
+            
+            document.getElementById('result-msg').innerHTML = `
+                ${message}<br><br>
+                Правильних відповідей: <span class="font-bold text-xl text-amber-400">${score}</span> з 10<br>
+                Статус: ${statusText}
+            `;
+        }
+    </script>
+</body>
+</html>
