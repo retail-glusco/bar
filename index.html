@@ -49,7 +49,7 @@
             <button onclick="startExam()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-amber-600 p-4 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
                 <div>
                     <div class="text-lg font-bold text-amber-400">3. Іспит (Атестація)</div>
-                    <div class="text-xs text-slate-400">5 хвилин. Суворий regime. Дозволено 3 помилки.</div>
+                    <div class="text-xs text-slate-400">5 хвилин. Суворий режим. Дозволено 3 помилки.</div>
                 </div>
                 <div class="text-3xl">⏱️</div>
             </button>
@@ -115,22 +115,19 @@
             window.Telegram.WebApp.expand();
         }
 
-        // --- БАЗА АУДІОФАЙЛІВ ---
-        const sndClick = new Audio("https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"); // Спрощений короткий клік (буде обрізаний)
-        const sndWin = new Audio("https://actions.google.com/sounds/v1/cartoon/slide_whistle_to_drum_roll.ogg"); // Спеціальний звук успіху
-        const sndFail = new Audio("https://actions.google.com/sounds/v1/alarms/mechanical_clock_ring.ogg"); // Звук помилки
+        // --- ОНОВЛЕНА, СТАБІЛЬНА БАЗА ЗВУКІВ (.MP3) ---
+        const sndClick = new Audio("https://actions.google.com/sounds/v1/foley/plastic_crunch.ogg"); 
+        const sndWin = new Audio("https://actions.google.com/sounds/v1/cartoon/slide_whistle_to_drum_roll.ogg"); 
+        // Новий універсальний MP3 звук помилки (Buzzer) з Wikimedia
+        const sndFail = new Audio("https://upload.wikimedia.org/wikipedia/commons/5/5f/Wrong_Buzzer_Sound_Effect.mp3"); 
 
-        // Налаштування гучності (від 0.0 до 1.0)
-        sndClick.volume = 0.2;
-        sndWin.volume = 0.5;
-        sndFail.volume = 0.4;
+        sndClick.volume = 0.4;
+        sndWin.volume = 0.4;
+        sndFail.volume = 0.5; // Оптимальна гучність для баззера
 
-        // Функція для відтворення звуку кліку кнопки
         function playClickSound() {
             sndClick.currentTime = 0;
-            sndClick.play().catch(e => console.log("Аудіо заблоковано політикою браузера"));
-            // Швидко зупиняємо, щоб отримати ефект короткого кліку кнопки
-            setTimeout(() => { sndClick.pause(); }, 70);
+            sndClick.play().catch(e => console.log("Аудіо заблоковано"));
         }
 
         const cocktails = [
@@ -220,6 +217,7 @@
         function startPractice() {
             hideAll();
             currentMode = 'practice';
+            score = 0;
             document.getElementById('screen-game').classList.remove('hidden');
             document.getElementById('practice-badge').classList.remove('hidden');
             document.getElementById('exam-stats').classList.add('hidden');
@@ -253,6 +251,7 @@
             }, 1000);
         }
 
+        // Будує алфавітні стовпчики
         function initGameUI() {
             const kb = document.getElementById('keyboard');
             const sortedIngs = [...allIngredients].sort((a, b) => a.localeCompare(b, 'uk'));
@@ -336,7 +335,6 @@
             const isCorrect = required.length === assembled.length && required.every((val, index) => val === assembled[index]);
 
             if (isCorrect) {
-                // Вмикаємо звук успіху
                 sndWin.currentTime = 0;
                 sndWin.play().catch(e => console.log("Аудіо заблоковано"));
 
@@ -360,7 +358,7 @@
                 currentTarget = null;
                 nextCocktail();
             } else {
-                // Вмикаємо звук помилки
+                // Відтворюємо гарантований та гучний звук помилки (.mp3)
                 sndFail.currentTime = 0;
                 sndFail.play().catch(e => console.log("Аудіо заблоковано"));
 
