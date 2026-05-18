@@ -29,29 +29,37 @@
         <h1 class="text-3xl font-black mb-2 tracking-wider text-amber-400 uppercase text-center">Bar Training Hub</h1>
         <p class="text-xs text-slate-400 mb-8 text-center uppercase tracking-widest">Атестація барменів мережі GLUSCO</p>
         
-        <div class="w-full max-w-md space-y-4">
-            <button onclick="startLearn()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-600 p-4 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
+        <div class="w-full max-w-md space-y-3.5">
+            <button onclick="startLearn()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-600 p-3.5 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
                 <div>
-                    <div class="text-lg font-bold text-blue-400">1. Навчання</div>
+                    <div class="text-base font-bold text-blue-400">1. Навчання</div>
                     <div class="text-xs text-slate-400">Вивчення рецептур 10 базових напоїв</div>
                 </div>
-                <div class="text-3xl">📖</div>
+                <div class="text-2xl">📖</div>
             </button>
             
-            <button onclick="startPractice()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-600 p-4 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
+            <button onclick="startPractice()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-600 p-3.5 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
                 <div>
                     <div class="text-lg font-bold text-green-400">2. Практика</div>
-                    <div class="text-xs text-slate-400">Збирання рецептів з автоматичною роботою над помилками</div>
+                    <div class="text-xs text-slate-400">Збирання рецептів з роботою над помилками</div>
                 </div>
-                <div class="text-3xl">🧩</div>
+                <div class="text-2xl">🧩</div>
             </button>
 
-            <button onclick="startExam()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-amber-600 p-4 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
+            <button onclick="startTimeAttack()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-indigo-600 p-3.5 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
                 <div>
-                    <div class="text-lg font-bold text-amber-400">3. Іспит (Атестація)</div>
-                    <div class="text-xs text-slate-400">5 хвилин. Суворий режим. Дозволено 3 помилки.</div>
+                    <div class="text-lg font-bold text-indigo-400">3. Швидкісний Шейк (Рекорд)</div>
+                    <div class="text-xs text-slate-400">Всі 10 напоїв на швидкість. Битва за кращий час.</div>
                 </div>
-                <div class="text-3xl">⏱️</div>
+                <div class="text-2xl">⚡</div>
+            </button>
+
+            <button onclick="startExam()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-amber-600 p-3.5 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
+                <div>
+                    <div class="text-lg font-bold text-amber-400">4. Іспит (Атестація)</div>
+                    <div class="text-xs text-slate-400">7 хвилин на все. Дозволено лише 1 помилку.</div>
+                </div>
+                <div class="text-2xl">⏱️</div>
             </button>
         </div>
     </div>
@@ -70,11 +78,14 @@
         <header class="bg-slate-800 p-3 flex justify-between items-center border-b border-slate-700 flex-shrink-0">
             <button onclick="showMenu()" class="text-slate-400 hover:text-white px-3 py-1 bg-slate-700 rounded text-xs btn-ing">⬅ Меню</button>
             
-            <div id="exam-stats" class="hidden flex items-center space-x-4 text-xs font-bold">
-                <div class="text-green-400">Коктейлі: <span id="score-display">0</span>/10</div>
-                <div class="text-red-400">Помилки: <span id="mistakes-display">0</span>/3</div>
+            <div id="game-stats" class="flex items-center space-x-3 text-xs font-bold">
+                <span id="practice-badge" class="text-green-400 uppercase tracking-widest hidden">Режим практики</span>
+                <div id="active-stats" class="hidden flex items-center space-x-4">
+                    <div class="text-green-400">Коктейлі: <span id="score-display">0</span>/10</div>
+                    <div class="text-red-400">Помилки: <span id="mistakes-display">0</span><span id="mistakes-max">/1</span></div>
+                    <div class="text-amber-400 hidden" id="ta-timer-container">Час: <span id="ta-timer-display">0</span>с</div>
+                </div>
             </div>
-            <div id="practice-badge" class="text-green-400 font-bold uppercase tracking-widest text-xs">Режим практики</div>
         </header>
 
         <div id="timer-bar" class="h-1.5 w-full bg-slate-700 hidden flex-shrink-0">
@@ -115,39 +126,56 @@
             window.Telegram.WebApp.expand();
         }
 
-        // --- ПРОЦЕДУРНИЙ АУДІО-ДВИЖОК ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // --- ПРОЦЕДУРНИЙ АУДІО-ДВИЖОК З ЗАХИСТОМ ---
+        let audioCtx = null;
+        function initAudio() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext && !audioCtx) {
+                    audioCtx = new AudioContext();
+                }
+            } catch (e) {
+                console.warn("AudioContext не підтримується", e);
+            }
+        }
         
         function playSound(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
+            try {
+                if (!audioCtx) initAudio();
+                if (!audioCtx) return;
+                
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
 
-            const now = audioCtx.currentTime;
-            
-            if (type === 'click') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, now);
-                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
-                gainNode.gain.setValueAtTime(0.5, now);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now); osc.stop(now + 0.1);
-            } else if (type === 'success') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(440, now);
-                osc.frequency.setValueAtTime(554, now + 0.1);
-                osc.frequency.setValueAtTime(659, now + 0.2);
-                gainNode.gain.setValueAtTime(0.3, now);
-                gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
-                osc.start(now); osc.stop(now + 0.4);
-            } else if (type === 'error') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(150, now);
-                gainNode.gain.setValueAtTime(0.3, now);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.start(now); osc.stop(now + 0.3);
+                const now = audioCtx.currentTime;
+                
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+                    gainNode.gain.setValueAtTime(0.5, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'success') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(554, now + 0.1);
+                    osc.frequency.setValueAtTime(659, now + 0.2);
+                    gainNode.gain.setValueAtTime(0.3, now);
+                    gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+                    osc.start(now); osc.stop(now + 0.4);
+                } else if (type === 'error') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    gainNode.gain.setValueAtTime(0.3, now);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
+                }
+            } catch (e) {
+                console.warn("Помилка відтворення звуку", e);
             }
         }
 
@@ -180,7 +208,8 @@
         let shaker = [];
         let score = 0;
         let mistakes = 0;
-        let timeLeft = 300; 
+        let timeLeft = 420; 
+        let elapsedTime = 0; 
         let timerInterval;
         let cocktailQueue = []; 
 
@@ -235,40 +264,77 @@
             `).join('');
         }
 
+        function initHeaderUI() {
+            const pb = document.getElementById('practice-badge');
+            const as = document.getElementById('active-stats');
+            const mm = document.getElementById('mistakes-max');
+            const tc = document.getElementById('ta-timer-container');
+            const tb = document.getElementById('timer-bar');
+
+            if (currentMode === 'practice') {
+                pb.classList.remove('hidden');
+                as.classList.add('hidden');
+                tb.classList.add('hidden');
+            } else if (currentMode === 'timeattack') {
+                pb.classList.add('hidden');
+                as.classList.remove('hidden');
+                mm.classList.add('hidden'); 
+                tc.classList.remove('hidden');
+                tb.classList.add('hidden');
+            } else if (currentMode === 'exam') {
+                pb.classList.add('hidden');
+                as.classList.remove('hidden');
+                mm.classList.remove('hidden');
+                mm.innerText = '/1'; 
+                tc.classList.add('hidden');
+                tb.classList.remove('hidden');
+            }
+        }
+
         function startPractice() {
             hideAll();
             currentMode = 'practice';
-            score = 0;
+            score = 0; mistakes = 0;
             document.getElementById('screen-game').classList.remove('hidden');
-            document.getElementById('practice-badge').classList.remove('hidden');
-            document.getElementById('exam-stats').classList.add('hidden');
-            document.getElementById('timer-bar').classList.add('hidden');
-            
+            initHeaderUI();
             cocktailQueue = shuffleArray([...cocktails]); 
             initGameUI();
             nextCocktail();
         }
 
+        function startTimeAttack() {
+            hideAll();
+            currentMode = 'timeattack';
+            score = 0; mistakes = 0; elapsedTime = 0;
+            document.getElementById('screen-game').classList.remove('hidden');
+            initHeaderUI();
+            updateExamStats();
+            cocktailQueue = shuffleArray([...cocktails]); 
+            initGameUI();
+            nextCocktail();
+
+            timerInterval = setInterval(() => {
+                elapsedTime++;
+                document.getElementById('ta-timer-display').innerText = elapsedTime;
+            }, 1000);
+        }
+
         function startExam() {
             hideAll();
             currentMode = 'exam';
-            score = 0; mistakes = 0; timeLeft = 300; 
-            
+            score = 0; mistakes = 0; timeLeft = 420; 
             document.getElementById('screen-game').classList.remove('hidden');
-            document.getElementById('practice-badge').classList.add('hidden');
-            document.getElementById('exam-stats').classList.remove('hidden');
-            document.getElementById('timer-bar').classList.remove('hidden');
-            
-            cocktailQueue = shuffleArray([...cocktails]); 
+            initHeaderUI();
             updateExamStats();
+            cocktailQueue = shuffleArray([...cocktails]); 
             initGameUI();
             nextCocktail();
             
             document.getElementById('timer-progress').style.width = '100%';
             timerInterval = setInterval(() => {
                 timeLeft--;
-                document.getElementById('timer-progress').style.width = `${(timeLeft/300)*100}%`;
-                if(timeLeft <= 0) endGame("⏰ ЧАС ВИЙШОВ", "Ви не вклалися у відведені 5 хвилин.");
+                document.getElementById('timer-progress').style.width = `${(timeLeft/420)*100}%`;
+                if(timeLeft <= 0) endGame("⏰ ЧАС ВИЙШОВ", "Ви не вклалися у відведені 7 хвилин.");
             }, 1000);
         }
 
@@ -298,7 +364,10 @@
             if (!currentTarget && cocktailQueue.length === 0) {
                 if (currentMode === 'exam') {
                     playSound('success');
-                    endGame("🎉 ІСПИТ ЗАВЕРШЕНО", "Чудова робота! Ви успішно відповіли на всі питання.");
+                    endGame("🎉 ІСПИТ ЗАВЕРШЕНО", "Чудова робота! Ви успішно пройшли атестацію.");
+                    return;
+                } else if (currentMode === 'timeattack') {
+                    endTimeAttackGame();
                     return;
                 } else {
                     playSound('success');
@@ -356,14 +425,17 @@
 
             if (isCorrect) {
                 playSound('success');
-
                 score++;
+                updateExamStats();
+
                 if (currentMode === 'exam') {
-                    timeLeft = Math.min(300, timeLeft + 4); 
-                    updateExamStats();
-                    
                     if (cocktailQueue.length === 0) {
                         endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Ви відповіли на всі питання. Ваш результат: ${score}/10.`);
+                        return;
+                    }
+                } else if (currentMode === 'timeattack') {
+                    if (score === 10) {
+                        endTimeAttackGame();
                         return;
                     }
                 } else {
@@ -379,31 +451,42 @@
             } else {
                 playSound('error');
 
-                if (currentMode === 'exam') {
-                    mistakes++;
-                    updateExamStats();
-                    
-                    alert(`❌ Помилка в рецепті!\n\nДля "${currentTarget.name}" потрібно використовувати:\n• ${currentTarget.ingredients.join('\n• ')}`);
-                    
-                    if (mistakes >= 3) {
-                        endGame("❌ ІСПИТ ПРОВАЛЕНО", "Ви припустилися 3 критичних помилок під час складання рецептів.");
-                        return;
+                setTimeout(() => {
+                    if (currentMode === 'exam') {
+                        mistakes++;
+                        updateExamStats();
+                        
+                        alert(`❌ Помилка в рецепті!\n\nДля "${currentTarget.name}" потрібно використовувати:\n• ${currentTarget.ingredients.join('\n• ')}`);
+                        
+                        if (mistakes >= 2) { 
+                            endGame("❌ ІСПИТ ПРОВАЛЕНО", "Ви припустилися більше ніж 1 помилки під час атестації.");
+                            return;
+                        }
+                        
+                        if (cocktailQueue.length === 0) {
+                            endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Всі питання вичерпано. Ваш результат: ${score}/10.`);
+                            return;
+                        }
+                        
+                        currentTarget = null;
+                        nextCocktail();
+                    } else if (currentMode === 'timeattack') {
+                        mistakes++;
+                        updateExamStats();
+                        
+                        alert(`❌ Помилка в рецепті!\n\nДля "${currentTarget.name}" потрібно використовувати:\n• ${currentTarget.ingredients.join('\n• ')}`);
+                        
+                        cocktailQueue.push(currentTarget);
+                        currentTarget = null;
+                        nextCocktail();
+                    } else {
+                        alert(`❌ Помилка в рецепті!\n\nДля "${currentTarget.name}" потрібно використовувати:\n• ${currentTarget.ingredients.join('\n• ')}`);
+                        
+                        returnToQueue(currentTarget);
+                        currentTarget = null;
+                        nextCocktail();
                     }
-                    
-                    if (cocktailQueue.length === 0) {
-                        endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Всі питання вичерпано. Ваш результат: ${score}/10.`);
-                        return;
-                    }
-                    
-                    currentTarget = null;
-                    nextCocktail();
-                } else {
-                    alert(`❌ Помилка в рецепті!\n\nДля "${currentTarget.name}" потрібно використовувати:\n• ${currentTarget.ingredients.join('\n• ')}`);
-                    
-                    returnToQueue(currentTarget);
-                    currentTarget = null;
-                    nextCocktail();
-                }
+                }, 100);
             }
         }
 
@@ -412,12 +495,43 @@
             document.getElementById('mistakes-display').innerText = mistakes;
         }
 
+        function endTimeAttackGame() {
+            clearInterval(timerInterval);
+            document.getElementById('overlay-result').classList.remove('hidden');
+            document.getElementById('result-title').innerText = "🏁 ШВИДКІСНИЙ ШЕЙК ЗАВЕРШЕНО";
+            document.getElementById('result-icon').innerText = "⏱️";
+            
+            let record = null;
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('uk-UA');
+            
+            try {
+                const recordStr = localStorage.getItem('glusco_bar_record');
+                if (recordStr) record = JSON.parse(recordStr);
+            } catch(e) {
+                console.warn("Локальне сховище заблоковано");
+            }
+            
+            let msg = `Ви успішно зібрали всі 10 напоїв!<br>Ваш підсумковий час: <span class="font-bold text-xl text-amber-400">${elapsedTime} сек</span>.<br>Невдалих спроб за зміну: ${mistakes}.<br><br>`;
+            
+            if (!record || elapsedTime < record.time) {
+                try {
+                    localStorage.setItem('glusco_bar_record', JSON.stringify({ time: elapsedTime, date: dateStr }));
+                } catch(e) {}
+                msg += `<span class="text-green-400 font-bold text-lg animate-bounce block mt-2">🥳 ВІТАЄМО! ЦЕ НОВИЙ РЕКОРД ЗМІНИ!</span>`;
+            } else {
+                msg += `<span class="text-slate-400 block mt-2">Не вийшло побити результат від ${record.date} (${record.time} сек). Спробуйте ще раз!</span>`;
+            }
+            
+            document.getElementById('result-msg').innerHTML = msg;
+        }
+
         function endGame(title, message) {
             clearInterval(timerInterval);
             document.getElementById('overlay-result').classList.remove('hidden');
             document.getElementById('result-title').innerText = title;
             
-            const isPassed = currentMode === 'exam' ? (score >= 7 && mistakes < 3) : true;
+            const isPassed = currentMode === 'exam' ? (score >= 10 && mistakes < 2) : true;
             if (!isPassed) {
                 playSound('error');
             } else {
