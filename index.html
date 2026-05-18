@@ -87,7 +87,7 @@
                 <div id="target-cocktail" class="text-xl font-black text-amber-400">...</div>
             </div>
 
-            <div class="flex-1 border-2 border-dashed border-slate-600 rounded-xl mb-2 p-2 flex flex-wrap gap-1.5 content-start bg-slate-900/50 custom-scroll" id="shaker-area">
+            <div class="h-36 border-2 border-dashed border-slate-600 rounded-xl mb-2 p-2 flex flex-wrap gap-1.5 content-start bg-slate-900/50 custom-scroll flex-shrink-0" id="shaker-area">
                 </div>
 
             <div class="flex gap-2 mb-2 flex-shrink-0">
@@ -95,7 +95,7 @@
                 <button onclick="clearShaker()" class="bg-red-900 hover:bg-red-800 text-white font-bold py-2.5 px-5 rounded-lg shadow btn-ing text-xs">Скинути</button>
             </div>
 
-            <div class="h-48 custom-scroll border border-slate-700 rounded-lg p-1.5 bg-slate-950 flex-shrink-0 pb-6">
+            <div class="flex-1 custom-scroll border border-slate-700 rounded-lg p-1.5 bg-slate-950 pb-6">
                 <div class="grid grid-cols-2 gap-1.5" id="keyboard">
                     </div>
             </div>
@@ -115,19 +115,40 @@
             window.Telegram.WebApp.expand();
         }
 
-        // --- ОНОВЛЕНА, СТАБІЛЬНА БАЗА ЗВУКІВ (.MP3) ---
-        const sndClick = new Audio("https://actions.google.com/sounds/v1/foley/plastic_crunch.ogg"); 
-        const sndWin = new Audio("https://actions.google.com/sounds/v1/cartoon/slide_whistle_to_drum_roll.ogg"); 
-        // Новий універсальний MP3 звук помилки (Buzzer) з Wikimedia
-        const sndFail = new Audio("https://upload.wikimedia.org/wikipedia/commons/5/5f/Wrong_Buzzer_Sound_Effect.mp3"); 
+        // --- ПРОЦЕДУРНИЙ АУДІО-ДВИЖОК ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
 
-        sndClick.volume = 0.4;
-        sndWin.volume = 0.4;
-        sndFail.volume = 0.5; // Оптимальна гучність для баззера
-
-        function playClickSound() {
-            sndClick.currentTime = 0;
-            sndClick.play().catch(e => console.log("Аудіо заблоковано"));
+            const now = audioCtx.currentTime;
+            
+            if (type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+                gainNode.gain.setValueAtTime(0.5, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'success') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(554, now + 0.1);
+                osc.frequency.setValueAtTime(659, now + 0.2);
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
+            } else if (type === 'error') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            }
         }
 
         const cocktails = [
@@ -185,7 +206,7 @@
         }
 
         function hideAll() {
-            playClickSound();
+            playSound('click');
             document.getElementById('screen-menu').classList.add('hidden');
             document.getElementById('screen-learn').classList.add('hidden');
             document.getElementById('screen-game').classList.add('hidden');
@@ -251,7 +272,6 @@
             }, 1000);
         }
 
-        // Будує алфавітні стовпчики
         function initGameUI() {
             const kb = document.getElementById('keyboard');
             const sortedIngs = [...allIngredients].sort((a, b) => a.localeCompare(b, 'uk'));
@@ -277,11 +297,11 @@
         function nextCocktail() {
             if (!currentTarget && cocktailQueue.length === 0) {
                 if (currentMode === 'exam') {
-                    sndWin.play();
+                    playSound('success');
                     endGame("🎉 ІСПИТ ЗАВЕРШЕНО", "Чудова робота! Ви успішно відповіли на всі питання.");
                     return;
                 } else {
-                    sndWin.play();
+                    playSound('success');
                     alert("Супер! Ви бездоганно приготували всі напої. Колода перемішується заново!");
                     cocktailQueue = shuffleArray([...cocktails]);
                 }
@@ -295,13 +315,13 @@
         }
 
         function addIng(ing) {
-            playClickSound();
+            playSound('click');
             shaker.push(ing);
             renderShaker();
         }
 
         function clearShaker() {
-            playClickSound();
+            playSound('click');
             shaker = [];
             renderShaker();
         }
@@ -321,7 +341,7 @@
         }
 
         function removeIng(index) {
-            playClickSound();
+            playSound('click');
             shaker.splice(index, 1);
             renderShaker();
         }
@@ -335,8 +355,7 @@
             const isCorrect = required.length === assembled.length && required.every((val, index) => val === assembled[index]);
 
             if (isCorrect) {
-                sndWin.currentTime = 0;
-                sndWin.play().catch(e => console.log("Аудіо заблоковано"));
+                playSound('success');
 
                 score++;
                 if (currentMode === 'exam') {
@@ -358,9 +377,7 @@
                 currentTarget = null;
                 nextCocktail();
             } else {
-                // Відтворюємо гарантований та гучний звук помилки (.mp3)
-                sndFail.currentTime = 0;
-                sndFail.play().catch(e => console.log("Аудіо заблоковано"));
+                playSound('error');
 
                 if (currentMode === 'exam') {
                     mistakes++;
@@ -402,9 +419,9 @@
             
             const isPassed = currentMode === 'exam' ? (score >= 7 && mistakes < 3) : true;
             if (!isPassed) {
-                sndFail.play();
+                playSound('error');
             } else {
-                sndWin.play();
+                playSound('success');
             }
             
             const statusText = isPassed ? "<span class='text-green-400 font-bold'>АТЕСТАЦІЮ ПРОЙДЕНО!</span>" : "<span class='text-red-400 font-bold'>АТЕСТАЦІЮ НЕ СКЛАДЕНО.</span>";
