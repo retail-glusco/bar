@@ -7,26 +7,45 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; user-select: none; }
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; user-select: none; overflow: hidden; }
         .btn-ing { transition: transform 0.1s; }
-        .btn-ing:active { transform: scale(0.95); }
+        .btn-ing:active { transform: scale(0.92); }
         .hidden { display: none !important; }
         .progress-bar { transition: width 1s linear; }
         
-        .custom-scroll { 
-            overflow-y: auto; 
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior-y: contain; 
-        }
+        .custom-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+        /* Сучасні анімації */
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        .shake-screen { animation: shake 0.4s ease-in-out; border: 2px solid #ef4444 !important; }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-animate { animation: modalFadeIn 0.3s ease-out forwards; }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden relative">
+<body class="h-screen flex flex-col relative transition-colors duration-300" id="main-body">
+
+    <canvas id="fx-canvas" class="absolute inset-0 pointer-events-none z-40 w-full h-full"></canvas>
 
     <div id="screen-menu" class="flex-1 flex flex-col items-center justify-center p-6 bg-slate-900 z-10">
-        <div class="text-6xl mb-4 animate-bounce">🍹</div>
-        <h1 class="text-3xl font-black mb-2 tracking-wider text-amber-400 uppercase text-center">Bar Training Hub</h1>
+        <div class="text-7xl mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">🍹</div>
+        <h1 class="text-3xl font-black mb-2 tracking-wider text-amber-400 uppercase text-center drop-shadow-md">Bar Training Hub</h1>
         <p class="text-xs text-slate-400 mb-8 text-center uppercase tracking-widest">Атестація барменів мережі GLUSCO</p>
         
         <div class="w-full max-w-md space-y-3.5">
@@ -35,7 +54,7 @@
                     <div class="text-base font-bold text-blue-400">1. Навчання</div>
                     <div class="text-xs text-slate-400">Вивчення рецептур 10 базових напоїв</div>
                 </div>
-                <div class="text-2xl">📖</div>
+                <div class="text-2xl drop-shadow-md">📖</div>
             </button>
             
             <button onclick="startPractice()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-slate-600 p-3.5 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
@@ -43,15 +62,15 @@
                     <div class="text-lg font-bold text-green-400">2. Практика</div>
                     <div class="text-xs text-slate-400">Збирання рецептів з роботою над помилками</div>
                 </div>
-                <div class="text-2xl">🧩</div>
+                <div class="text-2xl drop-shadow-md">🧩</div>
             </button>
 
             <button onclick="startTimeAttack()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-indigo-600 p-3.5 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
                 <div>
-                    <div class="text-lg font-bold text-indigo-400">3. Швидкісний Шейк (Рекорд)</div>
-                    <div class="text-xs text-slate-400">Всі 10 напоїв на швидкість. Битва за кращий час.</div>
+                    <div class="text-lg font-bold text-indigo-400">3. Швидкісний Шейк</div>
+                    <div class="text-xs text-slate-400">Битва за кращий час без зупинок.</div>
                 </div>
-                <div class="text-2xl">⚡</div>
+                <div class="text-2xl drop-shadow-[0_0_10px_rgba(99,102,241,0.8)]">⚡</div>
             </button>
 
             <button onclick="startExam()" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 border border-amber-600 p-3.5 rounded-xl text-left flex items-center justify-between shadow-lg btn-ing">
@@ -59,14 +78,14 @@
                     <div class="text-lg font-bold text-amber-400">4. Іспит (Атестація)</div>
                     <div class="text-xs text-slate-400">7 хвилин на все. Дозволено лише 1 помилку.</div>
                 </div>
-                <div class="text-2xl">⏱️</div>
+                <div class="text-2xl drop-shadow-[0_0_10px_rgba(245,158,11,0.8)]">⏱️</div>
             </button>
         </div>
     </div>
 
-    <div id="screen-learn" class="hidden flex-1 flex flex-col z-10 overflow-hidden">
-        <header class="bg-slate-800 p-4 flex justify-between items-center border-b border-slate-700 flex-shrink-0">
-            <button onclick="showMenu()" class="text-slate-400 hover:text-white px-4 py-2 bg-slate-700 rounded text-sm btn-ing">⬅ Меню</button>
+    <div id="screen-learn" class="hidden flex-1 flex flex-col z-10 overflow-hidden bg-slate-900">
+        <header class="bg-slate-800 p-4 flex justify-between items-center border-b border-slate-700 flex-shrink-0 shadow-md">
+            <button onclick="showMenu()" class="text-slate-400 hover:text-white px-4 py-2 bg-slate-700 rounded text-sm btn-ing shadow">⬅ Меню</button>
             <h2 class="font-bold text-blue-400 uppercase text-sm tracking-wider">Технологічні карти</h2>
             <div class="w-16"></div>
         </header>
@@ -74,50 +93,61 @@
             </div>
     </div>
 
-    <div id="screen-game" class="hidden flex-1 flex flex-col z-10 overflow-hidden">
-        <header class="bg-slate-800 p-3 flex justify-between items-center border-b border-slate-700 flex-shrink-0">
+    <div id="screen-game" class="hidden flex-1 flex flex-col z-10 overflow-hidden bg-slate-900 border-2 border-transparent transition-all duration-300">
+        <header class="bg-slate-800 p-3 flex justify-between items-center border-b border-slate-700 flex-shrink-0 shadow-md">
             <button onclick="showMenu()" class="text-slate-400 hover:text-white px-3 py-1 bg-slate-700 rounded text-xs btn-ing">⬅ Меню</button>
             
             <div id="game-stats" class="flex items-center space-x-3 text-xs font-bold">
-                <span id="practice-badge" class="text-green-400 uppercase tracking-widest hidden">Режим практики</span>
-                <div id="active-stats" class="hidden flex items-center space-x-4">
-                    <div class="text-green-400">Коктейлі: <span id="score-display">0</span>/10</div>
-                    <div class="text-red-400">Помилки: <span id="mistakes-display">0</span><span id="mistakes-max">/1</span></div>
-                    <div class="text-amber-400 hidden" id="ta-timer-container">Час: <span id="ta-timer-display">0</span>с</div>
+                <span id="practice-badge" class="text-green-400 uppercase tracking-widest hidden drop-shadow">Режим практики</span>
+                <div id="active-stats" class="hidden flex items-center space-x-4 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-700">
+                    <div class="text-green-400">🍹 <span id="score-display">0</span>/10</div>
+                    <div class="text-red-400">❌ <span id="mistakes-display">0</span><span id="mistakes-max">/1</span></div>
+                    <div class="text-amber-400 hidden" id="ta-timer-container">⏱️ <span id="ta-timer-display">0</span>с</div>
                 </div>
             </div>
         </header>
 
         <div id="timer-bar" class="h-1.5 w-full bg-slate-700 hidden flex-shrink-0">
-            <div id="timer-progress" class="h-full bg-amber-500 w-full progress-bar"></div>
+            <div id="timer-progress" class="h-full bg-amber-500 w-full progress-bar shadow-[0_0_10px_rgba(245,158,11,0.8)]"></div>
         </div>
 
-        <main class="flex-1 p-3 flex flex-col overflow-hidden">
-            <div class="bg-slate-800 rounded-xl p-3 text-center border border-slate-600 mb-2 shadow-md flex-shrink-0">
+        <main class="flex-1 p-3 flex flex-col overflow-hidden relative">
+            <div class="bg-slate-800 rounded-xl p-3 text-center border border-slate-600 mb-2 shadow-lg flex-shrink-0 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50"></div>
                 <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Приготуйте напій:</div>
-                <div id="target-cocktail" class="text-xl font-black text-amber-400">...</div>
+                <div id="target-cocktail" class="text-xl font-black text-amber-400 drop-shadow-md">...</div>
             </div>
 
-            <div class="h-36 border-2 border-dashed border-slate-600 rounded-xl mb-2 p-2 flex flex-wrap gap-1.5 content-start bg-slate-900/50 custom-scroll flex-shrink-0" id="shaker-area">
+            <div class="h-36 border-2 border-dashed border-slate-600 rounded-xl mb-2 p-2 flex flex-wrap gap-1.5 content-start bg-slate-900/50 custom-scroll flex-shrink-0 shadow-inner" id="shaker-area">
                 </div>
 
             <div class="flex gap-2 mb-2 flex-shrink-0">
-                <button onclick="checkRecipe()" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-black py-2.5 rounded-lg shadow btn-ing uppercase tracking-wider text-xs">Віддати замовлення</button>
-                <button onclick="clearShaker()" class="bg-red-900 hover:bg-red-800 text-white font-bold py-2.5 px-5 rounded-lg shadow btn-ing text-xs">Скинути</button>
+                <button onclick="checkRecipe()" class="flex-1 bg-gradient-to-b from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 text-white font-black py-3 rounded-lg shadow-[0_4px_15px_rgba(34,197,94,0.4)] btn-ing uppercase tracking-wider text-xs border border-green-400">Віддати замовлення</button>
+                <button onclick="clearShaker()" class="bg-gradient-to-b from-red-800 to-red-950 text-white font-bold py-3 px-5 rounded-lg shadow-md btn-ing text-xs border border-red-700">Скинути</button>
             </div>
 
-            <div class="flex-1 custom-scroll border border-slate-700 rounded-lg p-1.5 bg-slate-950 pb-6">
+            <div class="flex-1 custom-scroll border border-slate-700 rounded-lg p-1.5 bg-slate-950 pb-6 shadow-inner">
                 <div class="grid grid-cols-2 gap-1.5" id="keyboard">
                     </div>
             </div>
         </main>
     </div>
 
-    <div id="overlay-result" class="absolute inset-0 bg-slate-900/95 z-50 hidden flex flex-col justify-center items-center text-center p-6 backdrop-blur-md">
-        <div id="result-icon" class="text-6xl mb-4">🏆</div>
-        <h1 id="result-title" class="text-3xl font-black mb-2 uppercase text-amber-400">Зміна закінчена</h1>
-        <p id="result-msg" class="text-slate-300 text-sm mb-8 max-w-sm leading-relaxed">...</p>
-        <button onclick="showMenu()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg btn-ing text-sm uppercase tracking-wider">Повернутися в меню</button>
+    <div id="custom-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md hidden transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-800 border border-red-500/50 rounded-2xl p-6 max-w-sm w-[90%] shadow-[0_0_30px_rgba(239,68,68,0.3)] modal-animate text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-600 via-red-400 to-red-600"></div>
+            <div class="text-5xl mb-3">❌</div>
+            <h3 class="text-xl font-black text-red-400 uppercase tracking-wider mb-2" id="modal-title">Помилка в рецепті</h3>
+            <p class="text-slate-300 text-sm mb-4 leading-relaxed" id="modal-text">...</p>
+            <button id="modal-btn" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl border border-slate-500 shadow btn-ing uppercase text-sm tracking-wider">Зрозуміло</button>
+        </div>
+    </div>
+
+    <div id="overlay-result" class="absolute inset-0 bg-slate-900/95 z-50 hidden flex flex-col justify-center items-center text-center p-6 backdrop-blur-lg">
+        <div id="result-icon" class="text-7xl mb-6 animate-bounce drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">🏆</div>
+        <h1 id="result-title" class="text-3xl font-black mb-3 uppercase text-amber-400 tracking-wider">Зміна закінчена</h1>
+        <p id="result-msg" class="text-slate-300 text-base mb-8 max-w-sm leading-relaxed bg-slate-800/50 p-4 rounded-xl border border-slate-700">...</p>
+        <button onclick="showMenu()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black py-4 px-10 rounded-full shadow-[0_0_20px_rgba(79,70,229,0.5)] btn-ing text-sm uppercase tracking-widest">Повернутися в меню</button>
     </div>
 
     <script>
@@ -126,59 +156,123 @@
             window.Telegram.WebApp.expand();
         }
 
-        // --- ПРОЦЕДУРНИЙ АУДІО-ДВИЖОК З ЗАХИСТОМ ---
+        // --- ВІЗУАЛЬНИЙ ДВИЖОК CANVAS (Конфетті та цифри) ---
+        const canvas = document.getElementById('fx-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let floaters = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 1) * 8 - 2;
+                this.life = 1.0;
+                this.color = color;
+                this.size = Math.random() * 4 + 2;
+            }
+            update() {
+                this.vy += 0.3; // Гравітація
+                this.x += this.vx; this.y += this.vy;
+                this.life -= 0.02;
+            }
+            draw(ctx) {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        class Floater {
+            constructor(x, y, text, color) {
+                this.x = x; this.y = y; this.text = text; this.color = color;
+                this.life = 1.0;
+            }
+            update() {
+                this.y -= 1.5; this.life -= 0.02;
+            }
+            draw(ctx) {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.font = "bold 28px 'Segoe UI', sans-serif";
+                ctx.textAlign = "center";
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.shadowBlur = 0; // reset
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function triggerSuccessVFX() {
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 3;
+            const colors = ['#34d399', '#fcd34d', '#60a5fa', '#fff'];
+            // Додаємо іскри
+            for(let i=0; i<40; i++) {
+                particles.push(new Particle(cx, cy, colors[Math.floor(Math.random() * colors.length)]));
+            }
+            // Додаємо спливаючий текст +1
+            floaters.push(new Floater(cx, cy - 20, "+1 КОКТЕЙЛЬ", "#4ade80"));
+        }
+
+        function animateCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, i) => { p.update(); p.draw(ctx); if(p.life <= 0) particles.splice(i, 1); });
+            floaters.forEach((f, i) => { f.update(); f.draw(ctx); if(f.life <= 0) floaters.splice(i, 1); });
+            requestAnimationFrame(animateCanvas);
+        }
+        animateCanvas();
+
+
+        // --- АУДІО-ДВИЖОК ---
         let audioCtx = null;
         function initAudio() {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (AudioContext && !audioCtx) {
-                    audioCtx = new AudioContext();
-                }
-            } catch (e) {
-                console.warn("AudioContext не підтримується", e);
-            }
+                if (AudioContext && !audioCtx) audioCtx = new AudioContext();
+            } catch (e) { console.warn("AudioContext не підтримується"); }
         }
         
         function playSound(type) {
             try {
                 if (!audioCtx) initAudio();
                 if (!audioCtx) return;
-                
                 if (audioCtx.state === 'suspended') audioCtx.resume();
+                
                 const osc = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
                 osc.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
-
                 const now = audioCtx.currentTime;
                 
                 if (type === 'click') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(800, now);
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(800, now);
                     osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
-                    gainNode.gain.setValueAtTime(0.5, now);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
                     osc.start(now); osc.stop(now + 0.1);
                 } else if (type === 'success') {
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(440, now);
-                    osc.frequency.setValueAtTime(554, now + 0.1);
-                    osc.frequency.setValueAtTime(659, now + 0.2);
-                    gainNode.gain.setValueAtTime(0.3, now);
-                    gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(554, now + 0.1); osc.frequency.setValueAtTime(659, now + 0.2);
+                    gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
                     osc.start(now); osc.stop(now + 0.4);
                 } else if (type === 'error') {
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(150, now);
-                    gainNode.gain.setValueAtTime(0.3, now);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
+                    gainNode.gain.setValueAtTime(0.4, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
                     osc.start(now); osc.stop(now + 0.3);
                 }
-            } catch (e) {
-                console.warn("Помилка відтворення звуку", e);
-            }
+            } catch (e) {}
         }
 
+        // --- ДАНІ РЕЦЕПТІВ ---
         const cocktails = [
             { name: "Mango Passion Margarita", icon: "🥭", ingredients: ["Напій «Маргарита Манго Маракуйя» 11.9%", "Лаймові чипси"] },
             { name: "Whisky Sour", icon: "🥃", ingredients: ["Віскі бурбон ВАЙЛД ТЕРКІ", "Сік лимону", "Цукровий сироп", "Настоянка Angostura Bitter", "Концентрат Ізіфом", "Апельсин", "Вишня Амарена Santorelli"] },
@@ -203,6 +297,7 @@
             "Цукрова пудра", "Курага"
         ];
 
+        // --- ІГРОВА ЛОГІКА ---
         let currentMode = ''; 
         let currentTarget = null;
         let shaker = [];
@@ -223,10 +318,32 @@
             return array;
         }
 
+        // Кастомне модальне вікно для помилок (замість alert)
+        let modalCallback = null;
+        function showCustomModal(title, text, callback) {
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-text').innerHTML = text;
+            modalCallback = callback;
+            
+            modal.classList.remove('hidden');
+            // Маленька затримка для CSS анімації opacity
+            setTimeout(() => { modal.classList.remove('opacity-0'); }, 10);
+        }
+
+        document.getElementById('modal-btn').addEventListener('click', () => {
+            playSound('click');
+            const modal = document.getElementById('custom-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => { 
+                modal.classList.add('hidden');
+                if (modalCallback) modalCallback();
+            }, 300); // чекаємо завершення CSS transition
+        });
+
         function returnToQueue(cocktail) {
-            if (cocktailQueue.length === 0) {
-                cocktailQueue.push(cocktail);
-            } else {
+            if (cocktailQueue.length === 0) cocktailQueue.push(cocktail);
+            else {
                 const minPos = Math.min(2, cocktailQueue.length);
                 const maxPos = cocktailQueue.length;
                 const targetPos = Math.floor(Math.random() * (maxPos - minPos + 1)) + minPos;
@@ -257,7 +374,7 @@
                     <div class="text-base font-black text-amber-400 mb-2 flex items-center gap-2">
                         <span class="text-xl">${c.icon}</span> ${idx + 1}. ${c.name}
                     </div>
-                    <div class="flex flex-wrap gap-1.5">
+                    <div class="flex flex-wrap gap-1.5 mt-3">
                         ${c.ingredients.map(ing => `<span class="bg-slate-900 text-slate-300 text-[11px] px-2.5 py-1.5 rounded border border-slate-700">${ing}</span>`).join('')}
                     </div>
                 </div>
@@ -272,47 +389,31 @@
             const tb = document.getElementById('timer-bar');
 
             if (currentMode === 'practice') {
-                pb.classList.remove('hidden');
-                as.classList.add('hidden');
-                tb.classList.add('hidden');
+                pb.classList.remove('hidden'); as.classList.add('hidden'); tb.classList.add('hidden');
             } else if (currentMode === 'timeattack') {
-                pb.classList.add('hidden');
-                as.classList.remove('hidden');
-                mm.classList.add('hidden'); 
-                tc.classList.remove('hidden');
-                tb.classList.add('hidden');
+                pb.classList.add('hidden'); as.classList.remove('hidden');
+                mm.classList.add('hidden'); tc.classList.remove('hidden'); tb.classList.add('hidden');
             } else if (currentMode === 'exam') {
-                pb.classList.add('hidden');
-                as.classList.remove('hidden');
-                mm.classList.remove('hidden');
-                mm.innerText = '/1'; 
-                tc.classList.add('hidden');
-                tb.classList.remove('hidden');
+                pb.classList.add('hidden'); as.classList.remove('hidden');
+                mm.classList.remove('hidden'); mm.innerText = '/1'; 
+                tc.classList.add('hidden'); tb.classList.remove('hidden');
             }
         }
 
         function startPractice() {
-            hideAll();
-            currentMode = 'practice';
-            score = 0; mistakes = 0;
+            hideAll(); currentMode = 'practice'; score = 0; mistakes = 0;
             document.getElementById('screen-game').classList.remove('hidden');
-            initHeaderUI();
-            cocktailQueue = shuffleArray([...cocktails]); 
-            initGameUI();
-            nextCocktail();
+            initHeaderUI(); cocktailQueue = shuffleArray([...cocktails]); 
+            initGameUI(); nextCocktail();
         }
 
         function startTimeAttack() {
-            hideAll();
-            currentMode = 'timeattack';
-            score = 0; mistakes = 0; elapsedTime = 0;
+            hideAll(); currentMode = 'timeattack'; score = 0; mistakes = 0; elapsedTime = 0;
             document.getElementById('screen-game').classList.remove('hidden');
-            initHeaderUI();
-            updateExamStats();
-            cocktailQueue = shuffleArray([...cocktails]); 
-            initGameUI();
-            nextCocktail();
+            initHeaderUI(); updateExamStats(); cocktailQueue = shuffleArray([...cocktails]); 
+            initGameUI(); nextCocktail();
 
+            document.getElementById('ta-timer-display').innerText = 0;
             timerInterval = setInterval(() => {
                 elapsedTime++;
                 document.getElementById('ta-timer-display').innerText = elapsedTime;
@@ -320,15 +421,10 @@
         }
 
         function startExam() {
-            hideAll();
-            currentMode = 'exam';
-            score = 0; mistakes = 0; timeLeft = 420; 
+            hideAll(); currentMode = 'exam'; score = 0; mistakes = 0; timeLeft = 420; 
             document.getElementById('screen-game').classList.remove('hidden');
-            initHeaderUI();
-            updateExamStats();
-            cocktailQueue = shuffleArray([...cocktails]); 
-            initGameUI();
-            nextCocktail();
+            initHeaderUI(); updateExamStats(); cocktailQueue = shuffleArray([...cocktails]); 
+            initGameUI(); nextCocktail();
             
             document.getElementById('timer-progress').style.width = '100%';
             timerInterval = setInterval(() => {
@@ -346,36 +442,36 @@
             
             for (let i = 0; i < half; i++) {
                 columnMajorArray.push(sortedIngs[i]); 
-                if (i + half < sortedIngs.length) {
-                    columnMajorArray.push(sortedIngs[i + half]); 
-                }
+                if (i + half < sortedIngs.length) columnMajorArray.push(sortedIngs[i + half]); 
             }
 
             kb.innerHTML = columnMajorArray.map(ing => `
-                <button onclick="addIng('${ing.replace(/'/g, "\\'")}')" class="bg-slate-800 hover:bg-slate-700 active:bg-blue-900 border border-slate-700 text-slate-200 rounded-lg py-2 px-2 text-[11px] font-medium shadow btn-ing text-left leading-tight truncate">
+                <button onclick="addIng('${ing.replace(/'/g, "\\'")}')" class="bg-slate-800 hover:bg-slate-700 active:bg-blue-900 border border-slate-700 text-slate-200 rounded-lg py-2.5 px-2 text-[11px] font-medium shadow-sm btn-ing text-left leading-tight truncate transition-colors">
                     🔹 ${ing}
                 </button>
             `).join('');
-            
             clearShaker();
         }
 
         function nextCocktail() {
             if (!currentTarget && cocktailQueue.length === 0) {
                 if (currentMode === 'exam') {
-                    playSound('success');
-                    endGame("🎉 ІСПИТ ЗАВЕРШЕНО", "Чудова робота! Ви успішно пройшли атестацію.");
+                    playSound('success'); triggerSuccessVFX();
+                    setTimeout(() => endGame("🎉 ІСПИТ ЗАВЕРШЕНО", "Чудова робота! Ви успішно пройшли атестацію."), 1000);
                     return;
                 } else if (currentMode === 'timeattack') {
-                    endTimeAttackGame();
-                    return;
+                    endTimeAttackGame(); return;
                 } else {
-                    playSound('success');
-                    alert("Супер! Ви бездоганно приготували всі напої. Колода перемішується заново!");
-                    cocktailQueue = shuffleArray([...cocktails]);
+                    playSound('success'); triggerSuccessVFX();
+                    setTimeout(() => {
+                        showCustomModal("Практика", "Ви бездоганно приготували всі напої. Колода перемішується заново!", () => {
+                            cocktailQueue = shuffleArray([...cocktails]);
+                            nextCocktail();
+                        });
+                    }, 1000);
+                    return;
                 }
             }
-            
             if (cocktailQueue.length > 0) {
                 currentTarget = cocktailQueue.shift();
                 document.getElementById('target-cocktail').innerText = `${currentTarget.icon} ${currentTarget.name}`;
@@ -384,15 +480,11 @@
         }
 
         function addIng(ing) {
-            playSound('click');
-            shaker.push(ing);
-            renderShaker();
+            playSound('click'); shaker.push(ing); renderShaker();
         }
 
         function clearShaker() {
-            playSound('click');
-            shaker = [];
-            renderShaker();
+            playSound('click'); shaker = []; renderShaker();
         }
 
         function renderShaker() {
@@ -401,7 +493,7 @@
                 area.innerHTML = '<span class="text-slate-500 m-auto text-xs italic">Додайте необхідні компоненти з меню знизу...</span>';
             } else {
                 area.innerHTML = shaker.map((ing, idx) => `
-                    <span class="bg-blue-950 text-blue-300 border border-blue-700 text-[10px] px-2 py-1 rounded-md shadow-sm flex items-center gap-1">
+                    <span class="animate-pop bg-slate-900 text-blue-300 border border-blue-900/50 text-[10px] px-2 py-1.5 rounded shadow-sm flex items-center gap-1">
                         ${ing}
                         <b class="text-red-400 hover:text-red-300 cursor-pointer pl-1 text-sm leading-none" onclick="event.stopPropagation(); removeIng(${idx})">×</b>
                     </span>
@@ -410,83 +502,63 @@
         }
 
         function removeIng(index) {
-            playSound('click');
-            shaker.splice(index, 1);
-            renderShaker();
+            playSound('click'); shaker.splice(index, 1); renderShaker();
+        }
+
+        function triggerErrorShake() {
+            playSound('error');
+            const screen = document.getElementById('screen-game');
+            screen.classList.add('shake-screen');
+            setTimeout(() => { screen.classList.remove('shake-screen'); }, 400);
         }
 
         function checkRecipe() {
             if (!currentTarget) return;
-            
             const required = [...currentTarget.ingredients].sort();
             const assembled = [...shaker].sort();
-            
             const isCorrect = required.length === assembled.length && required.every((val, index) => val === assembled[index]);
 
             if (isCorrect) {
-                playSound('success');
-                score++;
-                updateExamStats();
+                playSound('success'); triggerSuccessVFX();
+                score++; updateExamStats();
 
                 if (currentMode === 'exam') {
+                    timeLeft = Math.min(420, timeLeft + 4); 
                     if (cocktailQueue.length === 0) {
-                        endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Ви відповіли на всі питання. Ваш результат: ${score}/10.`);
+                        setTimeout(() => endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Ви відповіли на всі питання. Ваш результат: ${score}/10.`), 1000);
                         return;
                     }
                 } else if (currentMode === 'timeattack') {
-                    if (score === 10) {
-                        endTimeAttackGame();
-                        return;
-                    }
-                } else {
-                    const practiceAlert = document.createElement('div');
-                    practiceAlert.className = 'absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm font-bold animate-pulse';
-                    practiceAlert.innerText = '✅ Правильно!';
-                    document.body.appendChild(practiceAlert);
-                    setTimeout(() => practiceAlert.remove(), 1000);
+                    if (score === 10) { endTimeAttackGame(); return; }
                 }
                 
                 currentTarget = null;
-                nextCocktail();
+                setTimeout(() => nextCocktail(), 600); // Пауза, щоб подивитись на іскри
             } else {
-                playSound('error');
+                triggerErrorShake();
+                mistakes++; updateExamStats();
+                
+                const errText = `Для <b>${currentTarget.name}</b> потрібно використовувати:<br><br><span class="text-slate-400 text-xs text-left inline-block">• ${currentTarget.ingredients.join('<br>• ')}</span>`;
 
                 setTimeout(() => {
-                    if (currentMode === 'exam') {
-                        mistakes++;
-                        updateExamStats();
-                        
-                        alert(`❌ Помилка в рецепті!\n\nДля "${currentTarget.name}" потрібно використовувати:\n• ${currentTarget.ingredients.join('\n• ')}`);
-                        
-                        if (mistakes >= 2) { 
-                            endGame("❌ ІСПИТ ПРОВАЛЕНО", "Ви припустилися більше ніж 1 помилки під час атестації.");
-                            return;
+                    showCustomModal("Помилка в рецепті!", errText, () => {
+                        if (currentMode === 'exam') {
+                            if (mistakes >= 2) { 
+                                endGame("❌ ІСПИТ ПРОВАЛЕНО", "Ви припустилися більше ніж 1 помилки під час атестації.");
+                            } else if (cocktailQueue.length === 0) {
+                                endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Всі питання вичерпано. Ваш результат: ${score}/10.`);
+                            } else {
+                                currentTarget = null; nextCocktail();
+                            }
+                        } else if (currentMode === 'timeattack') {
+                            cocktailQueue.push(currentTarget);
+                            currentTarget = null; nextCocktail();
+                        } else {
+                            returnToQueue(currentTarget);
+                            currentTarget = null; nextCocktail();
                         }
-                        
-                        if (cocktailQueue.length === 0) {
-                            endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Всі питання вичерпано. Ваш результат: ${score}/10.`);
-                            return;
-                        }
-                        
-                        currentTarget = null;
-                        nextCocktail();
-                    } else if (currentMode === 'timeattack') {
-                        mistakes++;
-                        updateExamStats();
-                        
-                        alert(`❌ Помилка в рецепті!\n\nДля "${currentTarget.name}" потрібно використовувати:\n• ${currentTarget.ingredients.join('\n• ')}`);
-                        
-                        cocktailQueue.push(currentTarget);
-                        currentTarget = null;
-                        nextCocktail();
-                    } else {
-                        alert(`❌ Помилка в рецепті!\n\nДля "${currentTarget.name}" потрібно використовувати:\n• ${currentTarget.ingredients.join('\n• ')}`);
-                        
-                        returnToQueue(currentTarget);
-                        currentTarget = null;
-                        nextCocktail();
-                    }
-                }, 100);
+                    });
+                }, 400); // Чекаємо, поки закінчиться трясучка, і показуємо вікно
             }
         }
 
@@ -508,21 +580,16 @@
             try {
                 const recordStr = localStorage.getItem('glusco_bar_record');
                 if (recordStr) record = JSON.parse(recordStr);
-            } catch(e) {
-                console.warn("Локальне сховище заблоковано");
-            }
+            } catch(e) {}
             
-            let msg = `Ви успішно зібрали всі 10 напоїв!<br>Ваш підсумковий час: <span class="font-bold text-xl text-amber-400">${elapsedTime} сек</span>.<br>Невдалих спроб за зміну: ${mistakes}.<br><br>`;
+            let msg = `Ви успішно зібрали всі 10 напоїв!<br>Ваш підсумковий час: <span class="font-bold text-2xl text-amber-400 drop-shadow">${elapsedTime} сек</span>.<br>Невдалих спроб за зміну: ${mistakes}.<br><br>`;
             
             if (!record || elapsedTime < record.time) {
-                try {
-                    localStorage.setItem('glusco_bar_record', JSON.stringify({ time: elapsedTime, date: dateStr }));
-                } catch(e) {}
-                msg += `<span class="text-green-400 font-bold text-lg animate-bounce block mt-2">🥳 ВІТАЄМО! ЦЕ НОВИЙ РЕКОРД ЗМІНИ!</span>`;
+                try { localStorage.setItem('glusco_bar_record', JSON.stringify({ time: elapsedTime, date: dateStr })); } catch(e) {}
+                msg += `<span class="text-green-400 font-bold text-lg animate-pulse block mt-2">🥳 ВІТАЄМО! ЦЕ НОВИЙ РЕКОРД ЗМІНИ!</span>`;
             } else {
-                msg += `<span class="text-slate-400 block mt-2">Не вийшло побити результат від ${record.date} (${record.time} сек). Спробуйте ще раз!</span>`;
+                msg += `<span class="text-slate-400 block mt-2 text-xs border border-slate-700 bg-slate-800/50 p-2 rounded">Не вийшло побити результат від ${record.date} (${record.time} сек). Спробуйте ще раз!</span>`;
             }
-            
             document.getElementById('result-msg').innerHTML = msg;
         }
 
@@ -532,13 +599,10 @@
             document.getElementById('result-title').innerText = title;
             
             const isPassed = currentMode === 'exam' ? (score >= 10 && mistakes < 2) : true;
-            if (!isPassed) {
-                playSound('error');
-            } else {
-                playSound('success');
-            }
+            if (!isPassed) playSound('error');
+            else { playSound('success'); triggerSuccessVFX(); }
             
-            const statusText = isPassed ? "<span class='text-green-400 font-bold'>АТЕСТАЦІЮ ПРОЙДЕНО!</span>" : "<span class='text-red-400 font-bold'>АТЕСТАЦІЮ НЕ СКЛАДЕНО.</span>";
+            const statusText = isPassed ? "<span class='text-green-400 font-bold drop-shadow'>АТЕСТАЦІЮ ПРОЙДЕНО!</span>" : "<span class='text-red-500 font-bold drop-shadow'>АТЕСТАЦІЮ НЕ СКЛАДЕНО.</span>";
             document.getElementById('result-icon').innerText = isPassed ? "🏆" : "📉";
             
             document.getElementById('result-msg').innerHTML = `
