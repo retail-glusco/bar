@@ -115,6 +115,24 @@
             window.Telegram.WebApp.expand();
         }
 
+        // --- БАЗА АУДІОФАЙЛІВ ---
+        const sndClick = new Audio("https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"); // Спрощений короткий клік (буде обрізаний)
+        const sndWin = new Audio("https://actions.google.com/sounds/v1/cartoon/slide_whistle_to_drum_roll.ogg"); // Спеціальний звук успіху
+        const sndFail = new Audio("https://actions.google.com/sounds/v1/alarms/mechanical_clock_ring.ogg"); // Звук помилки
+
+        // Налаштування гучності (від 0.0 до 1.0)
+        sndClick.volume = 0.2;
+        sndWin.volume = 0.5;
+        sndFail.volume = 0.4;
+
+        // Функція для відтворення звуку кліку кнопки
+        function playClickSound() {
+            sndClick.currentTime = 0;
+            sndClick.play().catch(e => console.log("Аудіо заблоковано політикою браузера"));
+            // Швидко зупиняємо, щоб отримати ефект короткого кліку кнопки
+            setTimeout(() => { sndClick.pause(); }, 70);
+        }
+
         const cocktails = [
             { name: "Mango Passion Margarita", icon: "🥭", ingredients: ["Напій «Маргарита Манго Маракуйя» 11.9%", "Лаймові чипси"] },
             { name: "Whisky Sour", icon: "🥃", ingredients: ["Віскі бурбон ВАЙЛД ТЕРКІ", "Сік лимону", "Цукровий сироп", "Настоянка Angostura Bitter", "Концентрат Ізіфом", "Апельсин", "Вишня Амарена Santorelli"] },
@@ -170,6 +188,7 @@
         }
 
         function hideAll() {
+            playClickSound();
             document.getElementById('screen-menu').classList.add('hidden');
             document.getElementById('screen-learn').classList.add('hidden');
             document.getElementById('screen-game').classList.add('hidden');
@@ -259,9 +278,11 @@
         function nextCocktail() {
             if (!currentTarget && cocktailQueue.length === 0) {
                 if (currentMode === 'exam') {
+                    sndWin.play();
                     endGame("🎉 ІСПИТ ЗАВЕРШЕНО", "Чудова робота! Ви успішно відповіли на всі питання.");
                     return;
                 } else {
+                    sndWin.play();
                     alert("Супер! Ви бездоганно приготували всі напої. Колода перемішується заново!");
                     cocktailQueue = shuffleArray([...cocktails]);
                 }
@@ -275,11 +296,13 @@
         }
 
         function addIng(ing) {
+            playClickSound();
             shaker.push(ing);
             renderShaker();
         }
 
         function clearShaker() {
+            playClickSound();
             shaker = [];
             renderShaker();
         }
@@ -299,6 +322,7 @@
         }
 
         function removeIng(index) {
+            playClickSound();
             shaker.splice(index, 1);
             renderShaker();
         }
@@ -312,6 +336,10 @@
             const isCorrect = required.length === assembled.length && required.every((val, index) => val === assembled[index]);
 
             if (isCorrect) {
+                // Вмикаємо звук успіху
+                sndWin.currentTime = 0;
+                sndWin.play().catch(e => console.log("Аудіо заблоковано"));
+
                 score++;
                 if (currentMode === 'exam') {
                     timeLeft = Math.min(300, timeLeft + 4); 
@@ -332,6 +360,10 @@
                 currentTarget = null;
                 nextCocktail();
             } else {
+                // Вмикаємо звук помилки
+                sndFail.currentTime = 0;
+                sndFail.play().catch(e => console.log("Аудіо заблоковано"));
+
                 if (currentMode === 'exam') {
                     mistakes++;
                     updateExamStats();
@@ -371,6 +403,12 @@
             document.getElementById('result-title').innerText = title;
             
             const isPassed = currentMode === 'exam' ? (score >= 7 && mistakes < 3) : true;
+            if (!isPassed) {
+                sndFail.play();
+            } else {
+                sndWin.play();
+            }
+            
             const statusText = isPassed ? "<span class='text-green-400 font-bold'>АТЕСТАЦІЮ ПРОЙДЕНО!</span>" : "<span class='text-red-400 font-bold'>АТЕСТАЦІЮ НЕ СКЛАДЕНО.</span>";
             document.getElementById('result-icon').innerText = isPassed ? "🏆" : "📉";
             
