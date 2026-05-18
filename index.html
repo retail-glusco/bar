@@ -17,7 +17,6 @@
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
 
-        /* Сучасні анімації */
         @keyframes popIn {
             0% { transform: scale(0.5); opacity: 0; }
             80% { transform: scale(1.1); opacity: 1; }
@@ -89,8 +88,7 @@
             <h2 class="font-bold text-blue-400 uppercase text-sm tracking-wider">Технологічні карти</h2>
             <div class="w-16"></div>
         </header>
-        <div class="flex-1 p-4 space-y-3 custom-scroll pb-12" id="learn-list">
-            </div>
+        <div class="flex-1 p-4 space-y-3 custom-scroll pb-12" id="learn-list"></div>
     </div>
 
     <div id="screen-game" class="hidden flex-1 flex flex-col z-10 overflow-hidden bg-slate-900 border-2 border-transparent transition-all duration-300">
@@ -118,8 +116,7 @@
                 <div id="target-cocktail" class="text-xl font-black text-amber-400 drop-shadow-md">...</div>
             </div>
 
-            <div class="h-36 border-2 border-dashed border-slate-600 rounded-xl mb-2 p-2 flex flex-wrap gap-1.5 content-start bg-slate-900/50 custom-scroll flex-shrink-0 shadow-inner" id="shaker-area">
-                </div>
+            <div class="h-36 border-2 border-dashed border-slate-600 rounded-xl mb-2 p-2 flex flex-wrap gap-1.5 content-start bg-slate-900/50 custom-scroll flex-shrink-0 shadow-inner" id="shaker-area"></div>
 
             <div class="flex gap-2 mb-2 flex-shrink-0">
                 <button onclick="checkRecipe()" class="flex-1 bg-gradient-to-b from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 text-white font-black py-3 rounded-lg shadow-[0_4px_15px_rgba(34,197,94,0.4)] btn-ing uppercase tracking-wider text-xs border border-green-400">Віддати замовлення</button>
@@ -127,8 +124,7 @@
             </div>
 
             <div class="flex-1 custom-scroll border border-slate-700 rounded-lg p-1.5 bg-slate-950 pb-6 shadow-inner">
-                <div class="grid grid-cols-2 gap-1.5" id="keyboard">
-                    </div>
+                <div class="grid grid-cols-2 gap-1.5" id="keyboard"></div>
             </div>
         </main>
     </div>
@@ -151,12 +147,22 @@
     </div>
 
     <script>
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.ready();
-            window.Telegram.WebApp.expand();
+        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+        if (tg) {
+            tg.ready();
+            tg.expand();
         }
 
-        // --- ВІЗУАЛЬНИЙ ДВИЖОК CANVAS (Конфетті та цифри) ---
+        // Вібрація (Тактильний відгук) для Telegram
+        function triggerHaptic(style) {
+            if (tg && tg.HapticFeedback) {
+                if (style === 'click') tg.HapticFeedback.impactOccurred('light');
+                else if (style === 'error') tg.HapticFeedback.impactOccurred('heavy');
+                else if (style === 'success') tg.HapticFeedback.notificationOccurred('success');
+            }
+        }
+
+        // --- ВІЗУАЛЬНИЙ ДВИЖОК CANVAS ---
         const canvas = document.getElementById('fx-canvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
@@ -179,9 +185,7 @@
                 this.size = Math.random() * 4 + 2;
             }
             update() {
-                this.vy += 0.3; // Гравітація
-                this.x += this.vx; this.y += this.vy;
-                this.life -= 0.02;
+                this.vy += 0.3; this.x += this.vx; this.y += this.vy; this.life -= 0.02;
             }
             draw(ctx) {
                 ctx.globalAlpha = Math.max(0, this.life);
@@ -196,9 +200,7 @@
                 this.x = x; this.y = y; this.text = text; this.color = color;
                 this.life = 1.0;
             }
-            update() {
-                this.y -= 1.5; this.life -= 0.02;
-            }
+            update() { this.y -= 1.5; this.life -= 0.02; }
             draw(ctx) {
                 ctx.globalAlpha = Math.max(0, this.life);
                 ctx.fillStyle = this.color;
@@ -207,7 +209,7 @@
                 ctx.shadowColor = 'rgba(0,0,0,0.8)';
                 ctx.shadowBlur = 4;
                 ctx.fillText(this.text, this.x, this.y);
-                ctx.shadowBlur = 0; // reset
+                ctx.shadowBlur = 0;
                 ctx.globalAlpha = 1.0;
             }
         }
@@ -216,11 +218,7 @@
             const cx = window.innerWidth / 2;
             const cy = window.innerHeight / 3;
             const colors = ['#34d399', '#fcd34d', '#60a5fa', '#fff'];
-            // Додаємо іскри
-            for(let i=0; i<40; i++) {
-                particles.push(new Particle(cx, cy, colors[Math.floor(Math.random() * colors.length)]));
-            }
-            // Додаємо спливаючий текст +1
+            for(let i=0; i<40; i++) particles.push(new Particle(cx, cy, colors[Math.floor(Math.random() * colors.length)]));
             floaters.push(new Floater(cx, cy - 20, "+1 КОКТЕЙЛЬ", "#4ade80"));
         }
 
@@ -232,17 +230,17 @@
         }
         animateCanvas();
 
-
         // --- АУДІО-ДВИЖОК ---
         let audioCtx = null;
         function initAudio() {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 if (AudioContext && !audioCtx) audioCtx = new AudioContext();
-            } catch (e) { console.warn("AudioContext не підтримується"); }
+            } catch (e) {}
         }
         
         function playSound(type) {
+            triggerHaptic(type); // Завжди викликаємо вібрацію разом зі звуком
             try {
                 if (!audioCtx) initAudio();
                 if (!audioCtx) return;
@@ -272,7 +270,6 @@
             } catch (e) {}
         }
 
-        // --- ДАНІ РЕЦЕПТІВ ---
         const cocktails = [
             { name: "Mango Passion Margarita", icon: "🥭", ingredients: ["Напій «Маргарита Манго Маракуйя» 11.9%", "Лаймові чипси"] },
             { name: "Whisky Sour", icon: "🥃", ingredients: ["Віскі бурбон ВАЙЛД ТЕРКІ", "Сік лимону", "Цукровий сироп", "Настоянка Angostura Bitter", "Концентрат Ізіфом", "Апельсин", "Вишня Амарена Santorelli"] },
@@ -297,37 +294,41 @@
             "Цукрова пудра", "Курага"
         ];
 
-        // --- ІГРОВА ЛОГІКА ---
-        let currentMode = ''; 
-        let currentTarget = null;
-        let shaker = [];
-        let score = 0;
-        let mistakes = 0;
-        let timeLeft = 420; 
-        let elapsedTime = 0; 
-        let timerInterval;
-        let cocktailQueue = []; 
+        // Розумне призначення емодзі замість нудних ромбиків
+        function getIngredientIcon(name) {
+            const n = name.toLowerCase();
+            if(n.includes('напій')) return '🍹';
+            if(n.includes('чипси') || n.includes('апельсин') || n.includes('лимон')) return '🍋';
+            if(n.includes('віскі') || n.includes('горілка') || n.includes('лікер') || n.includes('вино')) return '🥃';
+            if(n.includes('сироп') || n.includes('пудра')) return '🍯';
+            if(n.includes('сік')) return '🧃';
+            if(n.includes('вишня') || n.includes('маслини') || n.includes('курага')) return '🍒';
+            if(n.includes('кава') || n.includes('еспресо')) return '☕';
+            if(n.includes('бекон')) return '🥓';
+            if(n.includes('селера') || n.includes('ізіфом')) return '🌿';
+            if(n.includes('вода')) return '🧊';
+            return '🔹';
+        }
+
+        let currentMode = ''; let currentTarget = null; let shaker = []; let score = 0; let mistakes = 0;
+        let timeLeft = 420; let elapsedTime = 0; let timerInterval; let cocktailQueue = []; 
 
         function shuffleArray(array) {
             let currentIndex = array.length, randomIndex;
             while (currentIndex != 0) {
-                randomIndex = Math.floor(Math.random() * currentIndex);
-                currentIndex--;
+                randomIndex = Math.floor(Math.random() * currentIndex); currentIndex--;
                 [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
             }
             return array;
         }
 
-        // Кастомне модальне вікно для помилок (замість alert)
         let modalCallback = null;
         function showCustomModal(title, text, callback) {
             const modal = document.getElementById('custom-modal');
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-text').innerHTML = text;
             modalCallback = callback;
-            
             modal.classList.remove('hidden');
-            // Маленька затримка для CSS анімації opacity
             setTimeout(() => { modal.classList.remove('opacity-0'); }, 10);
         }
 
@@ -338,7 +339,7 @@
             setTimeout(() => { 
                 modal.classList.add('hidden');
                 if (modalCallback) modalCallback();
-            }, 300); // чекаємо завершення CSS transition
+            }, 300);
         });
 
         function returnToQueue(cocktail) {
@@ -360,32 +361,24 @@
             clearInterval(timerInterval);
         }
 
-        function showMenu() {
-            hideAll();
-            document.getElementById('screen-menu').classList.remove('hidden');
-        }
+        function showMenu() { hideAll(); document.getElementById('screen-menu').classList.remove('hidden'); }
 
         function startLearn() {
-            hideAll();
-            document.getElementById('screen-learn').classList.remove('hidden');
+            hideAll(); document.getElementById('screen-learn').classList.remove('hidden');
             const list = document.getElementById('learn-list');
             list.innerHTML = cocktails.map((c, idx) => `
                 <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-md">
-                    <div class="text-base font-black text-amber-400 mb-2 flex items-center gap-2">
-                        <span class="text-xl">${c.icon}</span> ${idx + 1}. ${c.name}
-                    </div>
+                    <div class="text-base font-black text-amber-400 mb-2 flex items-center gap-2"><span class="text-xl">${c.icon}</span> ${idx + 1}. ${c.name}</div>
                     <div class="flex flex-wrap gap-1.5 mt-3">
-                        ${c.ingredients.map(ing => `<span class="bg-slate-900 text-slate-300 text-[11px] px-2.5 py-1.5 rounded border border-slate-700">${ing}</span>`).join('')}
+                        ${c.ingredients.map(ing => `<span class="bg-slate-900 text-slate-300 text-[11px] px-2.5 py-1.5 rounded border border-slate-700">${getIngredientIcon(ing)} ${ing}</span>`).join('')}
                     </div>
                 </div>
             `).join('');
         }
 
         function initHeaderUI() {
-            const pb = document.getElementById('practice-badge');
-            const as = document.getElementById('active-stats');
-            const mm = document.getElementById('mistakes-max');
-            const tc = document.getElementById('ta-timer-container');
+            const pb = document.getElementById('practice-badge'); const as = document.getElementById('active-stats');
+            const mm = document.getElementById('mistakes-max'); const tc = document.getElementById('ta-timer-container');
             const tb = document.getElementById('timer-bar');
 
             if (currentMode === 'practice') {
@@ -395,8 +388,7 @@
                 mm.classList.add('hidden'); tc.classList.remove('hidden'); tb.classList.add('hidden');
             } else if (currentMode === 'exam') {
                 pb.classList.add('hidden'); as.classList.remove('hidden');
-                mm.classList.remove('hidden'); mm.innerText = '/1'; 
-                tc.classList.add('hidden'); tb.classList.remove('hidden');
+                mm.classList.remove('hidden'); tc.classList.add('hidden'); tb.classList.remove('hidden');
             }
         }
 
@@ -415,8 +407,7 @@
 
             document.getElementById('ta-timer-display').innerText = 0;
             timerInterval = setInterval(() => {
-                elapsedTime++;
-                document.getElementById('ta-timer-display').innerText = elapsedTime;
+                elapsedTime++; document.getElementById('ta-timer-display').innerText = elapsedTime;
             }, 1000);
         }
 
@@ -428,8 +419,7 @@
             
             document.getElementById('timer-progress').style.width = '100%';
             timerInterval = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer-progress').style.width = `${(timeLeft/420)*100}%`;
+                timeLeft--; document.getElementById('timer-progress').style.width = `${(timeLeft/420)*100}%`;
                 if(timeLeft <= 0) endGame("⏰ ЧАС ВИЙШОВ", "Ви не вклалися у відведені 7 хвилин.");
             }, 1000);
         }
@@ -446,8 +436,8 @@
             }
 
             kb.innerHTML = columnMajorArray.map(ing => `
-                <button onclick="addIng('${ing.replace(/'/g, "\\'")}')" class="bg-slate-800 hover:bg-slate-700 active:bg-blue-900 border border-slate-700 text-slate-200 rounded-lg py-2.5 px-2 text-[11px] font-medium shadow-sm btn-ing text-left leading-tight truncate transition-colors">
-                    🔹 ${ing}
+                <button onclick="addIng('${ing.replace(/'/g, "\\'")}')" class="bg-slate-800 hover:bg-slate-700 active:bg-blue-900 border border-slate-700 text-slate-200 rounded-lg py-2.5 px-2 text-[11px] font-medium shadow-sm btn-ing text-left leading-tight truncate transition-colors flex items-center gap-1">
+                    <span>${getIngredientIcon(ing)}</span> <span class="truncate">${ing}</span>
                 </button>
             `).join('');
             clearShaker();
@@ -465,8 +455,7 @@
                     playSound('success'); triggerSuccessVFX();
                     setTimeout(() => {
                         showCustomModal("Практика", "Ви бездоганно приготували всі напої. Колода перемішується заново!", () => {
-                            cocktailQueue = shuffleArray([...cocktails]);
-                            nextCocktail();
+                            cocktailQueue = shuffleArray([...cocktails]); nextCocktail();
                         });
                     }, 1000);
                     return;
@@ -479,13 +468,8 @@
             clearShaker();
         }
 
-        function addIng(ing) {
-            playSound('click'); shaker.push(ing); renderShaker();
-        }
-
-        function clearShaker() {
-            playSound('click'); shaker = []; renderShaker();
-        }
+        function addIng(ing) { playSound('click'); shaker.push(ing); renderShaker(); }
+        function clearShaker() { playSound('click'); shaker = []; renderShaker(); }
 
         function renderShaker() {
             const area = document.getElementById('shaker-area');
@@ -494,16 +478,14 @@
             } else {
                 area.innerHTML = shaker.map((ing, idx) => `
                     <span class="animate-pop bg-slate-900 text-blue-300 border border-blue-900/50 text-[10px] px-2 py-1.5 rounded shadow-sm flex items-center gap-1">
-                        ${ing}
+                        ${getIngredientIcon(ing)} ${ing}
                         <b class="text-red-400 hover:text-red-300 cursor-pointer pl-1 text-sm leading-none" onclick="event.stopPropagation(); removeIng(${idx})">×</b>
                     </span>
                 `).join('');
             }
         }
 
-        function removeIng(index) {
-            playSound('click'); shaker.splice(index, 1); renderShaker();
-        }
+        function removeIng(index) { playSound('click'); shaker.splice(index, 1); renderShaker(); }
 
         function triggerErrorShake() {
             playSound('error');
@@ -531,9 +513,8 @@
                 } else if (currentMode === 'timeattack') {
                     if (score === 10) { endTimeAttackGame(); return; }
                 }
-                
                 currentTarget = null;
-                setTimeout(() => nextCocktail(), 600); // Пауза, щоб подивитись на іскри
+                setTimeout(() => nextCocktail(), 600); 
             } else {
                 triggerErrorShake();
                 mistakes++; updateExamStats();
@@ -543,22 +524,16 @@
                 setTimeout(() => {
                     showCustomModal("Помилка в рецепті!", errText, () => {
                         if (currentMode === 'exam') {
-                            if (mistakes >= 2) { 
-                                endGame("❌ ІСПИТ ПРОВАЛЕНО", "Ви припустилися більше ніж 1 помилки під час атестації.");
-                            } else if (cocktailQueue.length === 0) {
-                                endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Всі питання вичерпано. Ваш результат: ${score}/10.`);
-                            } else {
-                                currentTarget = null; nextCocktail();
-                            }
+                            if (mistakes >= 2) endGame("❌ ІСПИТ ПРОВАЛЕНО", "Ви припустилися більше ніж 1 помилки під час атестації.");
+                            else if (cocktailQueue.length === 0) endGame("🎉 ІСПИТ ЗАВЕРШЕНО", `Всі питання вичерпано. Ваш результат: ${score}/10.`);
+                            else { currentTarget = null; nextCocktail(); }
                         } else if (currentMode === 'timeattack') {
-                            cocktailQueue.push(currentTarget);
-                            currentTarget = null; nextCocktail();
+                            cocktailQueue.push(currentTarget); currentTarget = null; nextCocktail();
                         } else {
-                            returnToQueue(currentTarget);
-                            currentTarget = null; nextCocktail();
+                            returnToQueue(currentTarget); currentTarget = null; nextCocktail();
                         }
                     });
-                }, 400); // Чекаємо, поки закінчиться трясучка, і показуємо вікно
+                }, 400); 
             }
         }
 
@@ -576,7 +551,6 @@
             let record = null;
             const now = new Date();
             const dateStr = now.toLocaleDateString('uk-UA');
-            
             try {
                 const recordStr = localStorage.getItem('glusco_bar_record');
                 if (recordStr) record = JSON.parse(recordStr);
@@ -585,9 +559,11 @@
             let msg = `Ви успішно зібрали всі 10 напоїв!<br>Ваш підсумковий час: <span class="font-bold text-2xl text-amber-400 drop-shadow">${elapsedTime} сек</span>.<br>Невдалих спроб за зміну: ${mistakes}.<br><br>`;
             
             if (!record || elapsedTime < record.time) {
+                playSound('success'); triggerSuccessVFX();
                 try { localStorage.setItem('glusco_bar_record', JSON.stringify({ time: elapsedTime, date: dateStr })); } catch(e) {}
                 msg += `<span class="text-green-400 font-bold text-lg animate-pulse block mt-2">🥳 ВІТАЄМО! ЦЕ НОВИЙ РЕКОРД ЗМІНИ!</span>`;
             } else {
+                playSound('click');
                 msg += `<span class="text-slate-400 block mt-2 text-xs border border-slate-700 bg-slate-800/50 p-2 rounded">Не вийшло побити результат від ${record.date} (${record.time} сек). Спробуйте ще раз!</span>`;
             }
             document.getElementById('result-msg').innerHTML = msg;
