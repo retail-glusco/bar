@@ -240,7 +240,7 @@
         }
         
         function playSound(type) {
-            triggerHaptic(type); // Завжди викликаємо вібрацію разом зі звуком
+            triggerHaptic(type);
             try {
                 if (!audioCtx) initAudio();
                 if (!audioCtx) return;
@@ -294,7 +294,6 @@
             "Цукрова пудра", "Курага"
         ];
 
-        // Розумне призначення емодзі замість нудних ромбиків
         function getIngredientIcon(name) {
             const n = name.toLowerCase();
             if(n.includes('напій')) return '🍹';
@@ -586,6 +585,37 @@
                 Правильних відповідей: <span class="font-bold text-xl text-amber-400">${score}</span> з 10<br>
                 Статус: ${statusText}
             `;
+
+            // --- ВІДПРАВКА ДАНИХ ІСПИТУ У GOOGLE ТАБЛИЦЮ ---
+            if (currentMode === 'exam') {
+                let userTgId = "Невідомо";
+                let userTgName = "Анонім";
+                
+                if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    userTgId = tg.initDataUnsafe.user.id;
+                    userTgName = tg.initDataUnsafe.user.first_name;
+                    if (tg.initDataUnsafe.user.last_name) {
+                        userTgName += " " + tg.initDataUnsafe.user.last_name;
+                    }
+                }
+
+                const payload = {
+                    userId: userTgId,
+                    userName: userTgName,
+                    score: score,
+                    mistakes: mistakes,
+                    status: isPassed ? "ПРОЙДЕНО" : "ПРОВАЛЕНО"
+                };
+
+                const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzLleClYC9D8FtMKeOPOPzz6i-c-xPtAwfRwhvtCEESM3z7Yy0Iix9fpeqGRRC_KW4u/exec";
+                
+                fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).catch(err => console.log("Помилка відправки:", err));
+            }
         }
     </script>
 </body>
